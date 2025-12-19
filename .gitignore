@@ -1,0 +1,11 @@
+# Personal
+credentials.json
+token.json
+.env
+
+# Python Junk
+__pycache__/
+*.pyc
+venv/
+.DS_Store
+*~
