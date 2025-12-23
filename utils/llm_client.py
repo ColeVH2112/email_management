@@ -17,6 +17,11 @@ def call_llama(prompt, system_role):
         response = requests.post(OLLAMA_URL, json=payload)
         response.raise_for_status()
         return json.loads(response.json()['response'])
+
+    except json.JSONDecodeError:
+        print(f"LLM output error: model returned invalid JSON")
+        return {}
+    
     except Exception as e:
         print (f"LLM Error: {e}")
         return {}
