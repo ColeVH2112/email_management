@@ -11,13 +11,16 @@ def run(email_text):
     INSTRUCTIONS:
     1. Identify if there is a specific Event, Deadline, or Meeting.
     2. Extract the Date and Time in ISO format (YYYY-MM-DD HH:MM) if possible.
-    3. Extract the location.
-    4. Determine urgency (High/Medium/Low).
+    3. If the email says "Next Tuesday", CALCULATE the date based on today ({today})
+    4. If you can not calculate the ISO date, copy the text (e.g. next tuesday, and include the current date ({today}))
+    5. Extract the location.
+    6. Determine urgency (High/Medium/Low).
 
     Output JSON ONLY:
     {{
         "has_event" : true/false,
         "event_name" : "short name or null",
+        "date: "YYYY-MM-DD or text description",
         "location" : "Location or null",
         "urgency": "High/Medium/Low"
     }}
