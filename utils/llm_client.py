@@ -2,8 +2,7 @@ import requests
 import json
 import re
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL = "llama3.2"
+from config import OLLAMA_URL, MODEL
 
 def call_llama(prompt, system_role, format_type="json"):
     payload = {
