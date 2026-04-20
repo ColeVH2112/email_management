@@ -32,7 +32,8 @@ async def _manual_login_prompt(page: Page):
 
 
 async def _open_context(playwright, headless: bool, cookies: list | None) -> tuple:
-    browser = await playwright.chromium.launch(headless=headless)
+    # Use system Chrome to avoid Playwright's bundled Chromium crashing on macOS 15
+    browser = await playwright.chromium.launch(headless=headless, channel="chrome")
     context = await browser.new_context()
     if cookies:
         await context.add_cookies(cookies)
@@ -122,25 +123,57 @@ async def _first_text(page: Page, selectors: list[str], max_len: int = 3000) -> 
     return ""
 
 
+async def _collect_rows(page: Page, row_sel: str, max_count: int):
+    """Scroll the email list until we have max_count rows or no new ones appear."""
+    # Find the scrollable list container (parent of the first row)
+    container = await page.evaluate(f"""() => {{
+        const row = document.querySelector('{row_sel}');
+        if (!row) return null;
+        let el = row.parentElement;
+        while (el) {{
+            if (el.scrollHeight > el.clientHeight) return true;
+            el = el.parentElement;
+        }}
+        return false;
+    }}""")
+
+    seen_count = 0
+    for _ in range(20):  # max scroll attempts
+        rows = await page.query_selector_all(row_sel)
+        if len(rows) >= max_count:
+            break
+        if len(rows) == seen_count:
+            break  # no new rows loaded — we've hit the end
+        seen_count = len(rows)
+        # Scroll the last visible row into view to trigger OWA's virtual list
+        if rows:
+            await rows[-1].scroll_into_view_if_needed()
+            await page.wait_for_timeout(600)
+
+    return await page.query_selector_all(row_sel)
+
+
 async def _scrape_inbox(page: Page, max_count: int) -> list[dict]:
     emails = []
 
-    # Find email rows
+    # Find email rows and scroll to load the full virtual list
     rows = []
+    matched_sel = None
     for sel in _ROW_SELECTORS:
         try:
             await page.wait_for_selector(sel, timeout=8_000)
-            rows = await page.query_selector_all(sel)
-            if rows:
-                print(f"Found {len(rows)} email rows (selector: {sel!r})")
-                break
+            matched_sel = sel
+            break
         except Exception:
             continue
 
-    if not rows:
+    if not matched_sel:
         print("WARNING: No email rows found. Inbox may be empty, or the OWA")
         print(f"         selectors need updating for: {page.url}")
         return emails
+
+    rows = await _collect_rows(page, matched_sel, max_count)
+    print(f"Found {len(rows)} email rows (selector: {matched_sel!r})")
 
     for i, row in enumerate(rows[:max_count]):
         try:

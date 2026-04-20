@@ -1,7 +1,11 @@
-# Personal
+# Personal / secrets
 credentials.json
 token.json
 .env
+*session*.json
+
+# Claude Code internals
+.claude/
 
 # Python Junk
 __pycache__/
